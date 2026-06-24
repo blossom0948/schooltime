@@ -2,14 +2,19 @@ package com.blossom.schooltime;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
@@ -19,18 +24,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Calendar;
-import java.util.List;
 
 public final class MainActivity extends Activity {
-    private static final int BLUE = Color.rgb(45, 108, 223);
-    private static final int INK = Color.rgb(22, 27, 34);
-    private static final int MUTED = Color.rgb(95, 104, 119);
-    private static final int LINE = Color.rgb(223, 228, 235);
-    private static final int SURFACE = Color.rgb(247, 249, 252);
+    private static final int ORANGE = Color.rgb(255, 122, 0);
+    private static final int ORANGE_SOFT = Color.rgb(255, 231, 210);
+    private static final int OFF_WHITE = Color.rgb(248, 249, 250);
+    private static final int SURFACE = Color.rgb(255, 255, 255);
+    private static final int SOFT_GRAY = Color.rgb(241, 243, 245);
+    private static final int INK = Color.rgb(23, 24, 28);
+    private static final int MUTED = Color.rgb(92, 99, 112);
+    private static final int LINE = Color.rgb(222, 226, 230);
 
     private ScheduleStore store;
-    private LinearLayout dayTabs;
-    private LinearLayout rows;
+    private LinearLayout grid;
     private TextView nextTitle;
     private TextView nextMeta;
     private int selectedDay;
@@ -42,191 +48,249 @@ public final class MainActivity extends Activity {
         selectedDay = Math.max(0, store.getTodaySchoolDay(Calendar.getInstance()));
         setContentView(buildContent());
         requestNotificationPermission();
-        renderDay();
+        renderSchedule();
         ScheduleNotifier.update(this);
     }
 
     private View buildContent() {
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(Color.WHITE);
+        ScrollView page = new ScrollView(this);
+        page.setFillViewport(true);
+        page.setBackgroundColor(OFF_WHITE);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(18), dp(18), dp(24));
-        scrollView.addView(root, matchWrap());
+        root.setPadding(dp(20), dp(22), dp(20), dp(28));
+        page.addView(root, matchWrap());
 
-        TextView appName = text("SchoolTime", 28, INK, Typeface.BOLD);
-        root.addView(appName, matchWrap());
+        LinearLayout appBar = new LinearLayout(this);
+        appBar.setGravity(Gravity.CENTER_VERTICAL);
+        appBar.setOrientation(LinearLayout.HORIZONTAL);
+        root.addView(appBar, matchWrapWithMargins(0, 0, 0, dp(18)));
+
+        TextView back = icon("‹", 32);
+        appBar.addView(back, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
+        TextView spacer = new TextView(this);
+        appBar.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
+
+        TextView settings = icon("⚙", 22);
+        settings.setOnClickListener(v -> Toast.makeText(this, "시간표 카드를 눌러 수정하세요.", Toast.LENGTH_SHORT).show());
+        appBar.addView(settings, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
+        TextView title = text("Schooltime", 32, INK, Typeface.BOLD);
+        root.addView(title, matchWrap());
 
         TextView subtitle = text("잠금화면 알림에서 다음 교시를 보고, 펼치면 오늘 시간표를 확인합니다.", 14, MUTED, Typeface.NORMAL);
-        subtitle.setPadding(0, dp(4), 0, dp(16));
-        root.addView(subtitle, matchWrap());
+        subtitle.setLineSpacing(dp(2), 1f);
+        root.addView(subtitle, matchWrapWithMargins(0, dp(6), 0, dp(18)));
 
-        LinearLayout nowCard = panel();
-        nextTitle = text("", 24, Color.WHITE, Typeface.BOLD);
-        nextMeta = text("", 14, Color.argb(220, 255, 255, 255), Typeface.NORMAL);
-        nowCard.setBackgroundColor(BLUE);
-        nowCard.addView(nextTitle, matchWrap());
-        nowCard.addView(nextMeta, matchWrap());
-        root.addView(nowCard, matchWrapWithMargins(0, 0, 0, dp(14)));
+        LinearLayout nextCard = card(SURFACE, 24, 0);
+        nextCard.setElevation(dp(4));
+        nextCard.setOrientation(LinearLayout.HORIZONTAL);
+        nextCard.setGravity(Gravity.CENTER_VERTICAL);
+        root.addView(nextCard, matchWrapWithMargins(0, 0, 0, dp(18)));
 
-        HorizontalScrollView tabScroll = new HorizontalScrollView(this);
-        tabScroll.setHorizontalScrollBarEnabled(false);
-        dayTabs = new LinearLayout(this);
-        dayTabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabScroll.addView(dayTabs, matchWrap());
-        root.addView(tabScroll, matchWrapWithMargins(0, 0, 0, dp(12)));
+        TextView badge = text("다음", 13, Color.WHITE, Typeface.BOLD);
+        badge.setGravity(Gravity.CENTER);
+        badge.setBackground(round(ORANGE, 18));
+        nextCard.addView(badge, new LinearLayout.LayoutParams(dp(58), dp(38)));
 
-        rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        root.addView(rows, matchWrap());
+        LinearLayout nextTexts = new LinearLayout(this);
+        nextTexts.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nextParams.leftMargin = dp(12);
+        nextCard.addView(nextTexts, nextParams);
 
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.setGravity(Gravity.CENTER_VERTICAL);
-        actions.setPadding(0, dp(16), 0, 0);
-        root.addView(actions, matchWrap());
+        nextTitle = text("", 20, INK, Typeface.BOLD);
+        nextMeta = text("", 13, MUTED, Typeface.NORMAL);
+        nextTexts.addView(nextTitle, matchWrap());
+        nextTexts.addView(nextMeta, matchWrapWithMargins(0, dp(3), 0, 0));
 
-        Button save = button("저장하고 알림 갱신");
-        save.setOnClickListener(v -> {
-            saveRows();
-            ScheduleNotifier.update(this);
-            Toast.makeText(this, "시간표와 잠금화면 알림을 갱신했습니다.", Toast.LENGTH_SHORT).show();
-        });
-        actions.addView(save, weightedButton());
+        HorizontalScrollView horizontal = new HorizontalScrollView(this);
+        horizontal.setHorizontalScrollBarEnabled(false);
+        horizontal.setFillViewport(false);
+        grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        horizontal.addView(grid, wrapWrap());
+        root.addView(horizontal, matchWrap());
 
-        Button reset = button("기본값");
+        Button reset = pillButton("기본 시간표로 초기화", SOFT_GRAY, INK);
         reset.setOnClickListener(v -> {
             store.resetDefaults();
-            renderDay();
+            renderSchedule();
             ScheduleNotifier.update(this);
         });
-        LinearLayout.LayoutParams resetParams = weightedButton();
-        resetParams.leftMargin = dp(10);
-        actions.addView(reset, resetParams);
+        root.addView(reset, matchWrapWithMargins(0, dp(18), 0, 0));
 
-        return scrollView;
+        return page;
     }
 
-    private void renderDay() {
-        renderTabs();
+    private void renderSchedule() {
         renderSummary();
-        rows.removeAllViews();
-        List<Period> periods = store.getDay(selectedDay);
-        for (Period period : periods) {
-            rows.addView(periodRow(period), matchWrapWithMargins(0, 0, 0, dp(10)));
+        grid.removeAllViews();
+        grid.addView(headerRow(), wrapWrap());
+        for (int period = 0; period < ScheduleStore.PERIODS; period++) {
+            grid.addView(periodRow(period), wrapWrap());
         }
     }
 
-    private void renderTabs() {
-        dayTabs.removeAllViews();
+    private LinearLayout headerRow() {
+        LinearLayout row = gridRow();
+        TextView empty = new TextView(this);
+        row.addView(empty, new LinearLayout.LayoutParams(dp(56), dp(46)));
         for (int day = 0; day < ScheduleStore.DAYS; day++) {
-            Button tab = button(ScheduleStore.DAY_NAMES[day]);
-            tab.setTextColor(day == selectedDay ? Color.WHITE : INK);
-            tab.setBackgroundColor(day == selectedDay ? BLUE : SURFACE);
+            TextView header = text(ScheduleStore.DAY_NAMES[day], 15, day == selectedDay ? Color.WHITE : INK, Typeface.BOLD);
+            header.setGravity(Gravity.CENTER);
+            header.setBackground(round(day == selectedDay ? ORANGE : SOFT_GRAY, 16));
             final int targetDay = day;
-            tab.setOnClickListener(v -> {
-                saveRows();
+            header.setOnClickListener(v -> {
                 selectedDay = targetDay;
-                renderDay();
+                renderSchedule();
             });
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(66), dp(42));
-            params.rightMargin = dp(8);
-            dayTabs.addView(tab, params);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(74), dp(42));
+            params.setMargins(dp(3), dp(2), dp(3), dp(8));
+            row.addView(header, params);
         }
+        return row;
+    }
+
+    private LinearLayout periodRow(int periodIndex) {
+        LinearLayout row = gridRow();
+        TextView label = text((periodIndex + 1) + "교시", 14, INK, Typeface.BOLD);
+        label.setGravity(Gravity.CENTER);
+        label.setBackground(round(SURFACE, 16, LINE, 1));
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(dp(56), dp(64));
+        labelParams.setMargins(0, dp(3), dp(3), dp(3));
+        row.addView(label, labelParams);
+
+        for (int day = 0; day < ScheduleStore.DAYS; day++) {
+            Period period = store.getPeriod(day, periodIndex);
+            TextView cell = text(period.subject.isEmpty() ? "+" : period.subject, 14, INK, Typeface.BOLD);
+            cell.setGravity(Gravity.CENTER);
+            cell.setMaxLines(2);
+            cell.setBackground(cellBackground(day, periodIndex));
+            cell.setElevation(day == selectedDay ? dp(2) : 0);
+            final Period target = period;
+            cell.setOnClickListener(v -> {
+                selectedDay = target.day;
+                showEditor(target);
+            });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(74), dp(64));
+            params.setMargins(dp(3), dp(3), dp(3), dp(3));
+            row.addView(cell, params);
+        }
+        return row;
+    }
+
+    private GradientDrawable cellBackground(int day, int periodIndex) {
+        Period next = store.findCurrentOrNext(Calendar.getInstance());
+        boolean isNext = next != null && next.day == day && next.index == periodIndex;
+        if (isNext) {
+            return round(ORANGE_SOFT, 16, ORANGE, 2);
+        }
+        if (day == selectedDay) {
+            return round(Color.rgb(255, 244, 235), 16, Color.rgb(255, 190, 135), 1);
+        }
+        return round(SURFACE, 16, LINE, 1);
+    }
+
+    private void showEditor(Period period) {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(22), dp(14), dp(22), dp(22));
+        sheet.setBackground(bottomSheetBackground());
+
+        TextView handle = new TextView(this);
+        handle.setBackground(round(Color.rgb(218, 222, 228), 6));
+        LinearLayout.LayoutParams handleParams = new LinearLayout.LayoutParams(dp(46), dp(5));
+        handleParams.gravity = Gravity.CENTER_HORIZONTAL;
+        handleParams.setMargins(0, 0, 0, dp(18));
+        sheet.addView(handle, handleParams);
+
+        TextView title = text("정보 수정", 24, INK, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        sheet.addView(title, matchWrapWithMargins(0, 0, 0, dp(20)));
+
+        EditText subject = input("과목명", period.subject);
+        sheet.addView(subject, matchWrapWithMargins(0, 0, 0, dp(12)));
+
+        EditText room = input("교실/메모", period.room);
+        sheet.addView(room, matchWrapWithMargins(0, 0, 0, dp(12)));
+
+        LinearLayout times = new LinearLayout(this);
+        times.setOrientation(LinearLayout.HORIZONTAL);
+        sheet.addView(times, matchWrapWithMargins(0, 0, 0, dp(14)));
+
+        EditText start = input("시작", Period.formatMinutes(period.startMinutes));
+        times.addView(start, new LinearLayout.LayoutParams(0, dp(54), 1f));
+
+        EditText end = input("종료", Period.formatMinutes(period.endMinutes));
+        LinearLayout.LayoutParams endParams = new LinearLayout.LayoutParams(0, dp(54), 1f);
+        endParams.leftMargin = dp(12);
+        times.addView(end, endParams);
+
+        Button save = pillButton("저장하기", ORANGE, Color.WHITE);
+        save.setOnClickListener(v -> {
+            int startMinutes = Period.parseMinutes(start.getText().toString(), period.startMinutes);
+            int endMinutes = Period.parseMinutes(end.getText().toString(), period.endMinutes);
+            if (endMinutes <= startMinutes) {
+                endMinutes = startMinutes + 45;
+            }
+            store.savePeriod(new Period(
+                    period.day,
+                    period.index,
+                    startMinutes,
+                    endMinutes,
+                    subject.getText().toString().trim(),
+                    room.getText().toString().trim()
+            ));
+            dialog.dismiss();
+            renderSchedule();
+            ScheduleNotifier.update(this);
+            Toast.makeText(this, "시간표를 저장했습니다.", Toast.LENGTH_SHORT).show();
+        });
+        sheet.addView(save, matchWrapWithMargins(0, 0, 0, dp(10)));
+
+        Button cancel = pillButton("취소", SOFT_GRAY, MUTED);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        sheet.addView(cancel, matchWrap());
+
+        dialog.setContentView(sheet);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setDimAmount(0.18f);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setGravity(Gravity.BOTTOM);
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.setOnShowListener(d -> {
+            Window shown = dialog.getWindow();
+            if (shown != null) {
+                shown.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                shown.setGravity(Gravity.BOTTOM);
+                shown.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            }
+        });
+        dialog.show();
     }
 
     private void renderSummary() {
         Period next = store.findCurrentOrNext(Calendar.getInstance());
         if (next == null) {
             nextTitle.setText("다음 교시 없음");
-            nextMeta.setText("시간표를 먼저 등록하세요.");
+            nextMeta.setText("시간표 카드를 눌러 수업을 등록하세요.");
             return;
         }
-        nextTitle.setText(next.subject);
+        nextTitle.setText(next.subject.isEmpty() ? "빈 수업" : next.subject);
         String meta = ScheduleStore.DAY_NAMES[next.day] + " " + (next.index + 1) + "교시 · " + next.timeText();
         if (!next.room.trim().isEmpty()) {
             meta += " · " + next.room;
         }
         nextMeta.setText(meta);
-    }
-
-    private View periodRow(Period period) {
-        LinearLayout row = panel();
-        row.setTag(period.index);
-
-        TextView label = text((period.index + 1) + "교시", 16, INK, Typeface.BOLD);
-        row.addView(label, matchWrap());
-
-        EditText subject = input("과목", period.subject);
-        subject.setTag("subject");
-        row.addView(subject, matchWrapWithMargins(0, dp(8), 0, 0));
-
-        EditText room = input("교실/메모", period.room);
-        room.setTag("room");
-        row.addView(room, matchWrapWithMargins(0, dp(8), 0, 0));
-
-        LinearLayout times = new LinearLayout(this);
-        times.setOrientation(LinearLayout.HORIZONTAL);
-        row.addView(times, matchWrapWithMargins(0, dp(8), 0, 0));
-
-        EditText start = input("시작", Period.formatMinutes(period.startMinutes));
-        start.setTag("start");
-        times.addView(start, weightedInput());
-
-        EditText end = input("종료", Period.formatMinutes(period.endMinutes));
-        end.setTag("end");
-        LinearLayout.LayoutParams endParams = weightedInput();
-        endParams.leftMargin = dp(8);
-        times.addView(end, endParams);
-
-        return row;
-    }
-
-    private void saveRows() {
-        for (int i = 0; i < rows.getChildCount(); i++) {
-            LinearLayout row = (LinearLayout) rows.getChildAt(i);
-            int index = (int) row.getTag();
-            EditText subject = findInput(row, "subject");
-            EditText room = findInput(row, "room");
-            EditText start = findInput(row, "start");
-            EditText end = findInput(row, "end");
-            Period old = store.getPeriod(selectedDay, index);
-            int startMinutes = Period.parseMinutes(start.getText().toString(), old.startMinutes);
-            int endMinutes = Period.parseMinutes(end.getText().toString(), old.endMinutes);
-            if (endMinutes <= startMinutes) {
-                endMinutes = startMinutes + 45;
-            }
-            store.savePeriod(new Period(
-                    selectedDay,
-                    index,
-                    startMinutes,
-                    endMinutes,
-                    subject.getText().toString().trim(),
-                    room.getText().toString().trim()
-            ));
-        }
-        renderSummary();
-    }
-
-    private EditText findInput(LinearLayout row, String tag) {
-        for (int i = 0; i < row.getChildCount(); i++) {
-            View child = row.getChildAt(i);
-            if (tag.equals(child.getTag())) {
-                return (EditText) child;
-            }
-            if (child instanceof LinearLayout) {
-                LinearLayout group = (LinearLayout) child;
-                for (int j = 0; j < group.getChildCount(); j++) {
-                    View nested = group.getChildAt(j);
-                    if (tag.equals(nested.getTag())) {
-                        return (EditText) nested;
-                    }
-                }
-            }
-        }
-        throw new IllegalStateException("Missing input " + tag);
     }
 
     private void requestNotificationPermission() {
@@ -244,11 +308,17 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private LinearLayout panel() {
+    private LinearLayout gridRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        return row;
+    }
+
+    private LinearLayout card(int color, int radius, int strokeWidth) {
         LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(14), dp(14), dp(14), dp(14));
-        layout.setBackgroundColor(SURFACE);
+        layout.setPadding(dp(16), dp(16), dp(16), dp(16));
+        layout.setBackground(round(color, radius, strokeWidth > 0 ? LINE : color, strokeWidth));
         return layout;
     }
 
@@ -262,6 +332,14 @@ public final class MainActivity extends Activity {
         return view;
     }
 
+    private TextView icon(String value, int sp) {
+        TextView view = text(value, sp, INK, Typeface.BOLD);
+        view.setGravity(Gravity.CENTER);
+        view.setBackground(round(SURFACE, 18));
+        view.setElevation(dp(2));
+        return view;
+    }
+
     private EditText input(String hint, String value) {
         EditText editText = new EditText(this);
         editText.setHint(hint);
@@ -270,20 +348,45 @@ public final class MainActivity extends Activity {
         editText.setTextSize(16);
         editText.setTextColor(INK);
         editText.setHintTextColor(MUTED);
-        editText.setBackgroundColor(Color.WHITE);
-        editText.setPadding(dp(10), 0, dp(10), 0);
+        editText.setPadding(dp(16), 0, dp(16), 0);
         editText.setInputType(InputType.TYPE_CLASS_TEXT);
+        editText.setBackground(round(Color.rgb(250, 251, 253), 14, Color.rgb(204, 210, 218), 1));
         return editText;
     }
 
-    private Button button(String label) {
+    private Button pillButton(String label, int background, int textColor) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
-        button.setTextSize(14);
-        button.setTextColor(INK);
-        button.setBackgroundColor(SURFACE);
+        button.setTextSize(16);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setTextColor(textColor);
+        button.setBackground(round(background, 24));
+        button.setMinHeight(dp(54));
+        button.setElevation(background == ORANGE ? dp(3) : 0);
         return button;
+    }
+
+    private GradientDrawable round(int color, int radius) {
+        return round(color, radius, color, 0);
+    }
+
+    private GradientDrawable round(int color, int radius, int strokeColor, int strokeWidth) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(radius));
+        if (strokeWidth > 0) {
+            drawable.setStroke(dp(strokeWidth), strokeColor);
+        }
+        return drawable;
+    }
+
+    private GradientDrawable bottomSheetBackground() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(SURFACE);
+        float r = dp(28);
+        drawable.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
+        return drawable;
     }
 
     private LinearLayout.LayoutParams matchWrap() {
@@ -293,18 +396,17 @@ public final class MainActivity extends Activity {
         );
     }
 
+    private LinearLayout.LayoutParams wrapWrap() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+    }
+
     private LinearLayout.LayoutParams matchWrapWithMargins(int left, int top, int right, int bottom) {
         LinearLayout.LayoutParams params = matchWrap();
         params.setMargins(left, top, right, bottom);
         return params;
-    }
-
-    private LinearLayout.LayoutParams weightedInput() {
-        return new LinearLayout.LayoutParams(0, dp(48), 1f);
-    }
-
-    private LinearLayout.LayoutParams weightedButton() {
-        return new LinearLayout.LayoutParams(0, dp(48), 1f);
     }
 
     private int dp(int value) {

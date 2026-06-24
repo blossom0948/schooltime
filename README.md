@@ -4,11 +4,12 @@ SchoolTime is an Android timetable app designed for Galaxy lock screens.
 
 ## What it does
 
-- Register a Monday-Friday school timetable.
+- Register a Monday-Friday weekly calendar timetable.
 - Show the current or next class in the app.
 - Keep an ongoing lock-screen notification that shows the next class.
 - Expand the notification to see the full timetable for today.
-- Tap the notification to open and edit the timetable.
+- Tap a class card to edit it from a rounded bottom sheet.
+- Use the orange weekly grid to scan the full school week at once.
 
 ## About Galaxy Now Bar
 
