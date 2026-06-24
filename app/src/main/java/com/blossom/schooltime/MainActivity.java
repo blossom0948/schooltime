@@ -17,6 +17,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -28,7 +29,7 @@ import java.util.Calendar;
 public final class MainActivity extends Activity {
     private static final int ORANGE = Color.rgb(255, 122, 0);
     private static final int ORANGE_SOFT = Color.rgb(255, 231, 210);
-    private static final int OFF_WHITE = Color.rgb(248, 249, 250);
+    private static final int OFF_WHITE = Color.rgb(251, 250, 247);
     private static final int SURFACE = Color.rgb(255, 255, 255);
     private static final int SOFT_GRAY = Color.rgb(241, 243, 245);
     private static final int INK = Color.rgb(23, 24, 28);
@@ -53,14 +54,21 @@ public final class MainActivity extends Activity {
     }
 
     private View buildContent() {
+        FrameLayout screen = new FrameLayout(this);
+        screen.setBackground(backgroundGradient());
+
         ScrollView page = new ScrollView(this);
         page.setFillViewport(true);
-        page.setBackgroundColor(OFF_WHITE);
+        page.setBackgroundColor(Color.TRANSPARENT);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(22), dp(20), dp(28));
+        root.setPadding(dp(20), dp(22), dp(20), dp(126));
         page.addView(root, matchWrap());
+        screen.addView(page, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
 
         LinearLayout appBar = new LinearLayout(this);
         appBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -84,8 +92,8 @@ public final class MainActivity extends Activity {
         subtitle.setLineSpacing(dp(2), 1f);
         root.addView(subtitle, matchWrapWithMargins(0, dp(6), 0, dp(18)));
 
-        LinearLayout nextCard = card(SURFACE, 24, 0);
-        nextCard.setElevation(dp(4));
+        LinearLayout nextCard = card(Color.argb(198, 255, 255, 255), 28, 1);
+        nextCard.setElevation(dp(10));
         nextCard.setOrientation(LinearLayout.HORIZONTAL);
         nextCard.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(nextCard, matchWrapWithMargins(0, 0, 0, dp(18)));
@@ -114,15 +122,29 @@ public final class MainActivity extends Activity {
         horizontal.addView(grid, wrapWrap());
         root.addView(horizontal, matchWrap());
 
-        Button reset = pillButton("기본 시간표로 초기화", SOFT_GRAY, INK);
+        Button reset = liquidButton("기본값", Color.argb(180, 255, 255, 255), INK);
         reset.setOnClickListener(v -> {
             store.resetDefaults();
             renderSchedule();
             ScheduleNotifier.update(this);
         });
-        root.addView(reset, matchWrapWithMargins(0, dp(18), 0, 0));
 
-        return page;
+        Button refresh = liquidButton("알림 갱신", ORANGE, Color.WHITE);
+        refresh.setOnClickListener(v -> {
+            ScheduleNotifier.update(this);
+            Toast.makeText(this, "잠금화면 알림을 갱신했습니다.", Toast.LENGTH_SHORT).show();
+        });
+
+        LinearLayout dock = bottomDock(reset, refresh);
+        FrameLayout.LayoutParams dockParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
+        );
+        dockParams.setMargins(dp(18), 0, dp(18), dp(18));
+        screen.addView(dock, dockParams);
+
+        return screen;
     }
 
     private void renderSchedule() {
@@ -141,7 +163,9 @@ public final class MainActivity extends Activity {
         for (int day = 0; day < ScheduleStore.DAYS; day++) {
             TextView header = text(ScheduleStore.DAY_NAMES[day], 15, day == selectedDay ? Color.WHITE : INK, Typeface.BOLD);
             header.setGravity(Gravity.CENTER);
-            header.setBackground(round(day == selectedDay ? ORANGE : SOFT_GRAY, 16));
+            header.setBackground(round(day == selectedDay ? ORANGE : Color.argb(170, 255, 255, 255), 18,
+                    day == selectedDay ? ORANGE : Color.argb(180, 255, 255, 255), 1));
+            header.setElevation(day == selectedDay ? dp(5) : dp(1));
             final int targetDay = day;
             header.setOnClickListener(v -> {
                 selectedDay = targetDay;
@@ -158,7 +182,8 @@ public final class MainActivity extends Activity {
         LinearLayout row = gridRow();
         TextView label = text((periodIndex + 1) + "교시", 14, INK, Typeface.BOLD);
         label.setGravity(Gravity.CENTER);
-        label.setBackground(round(SURFACE, 16, LINE, 1));
+        label.setBackground(round(Color.argb(172, 255, 255, 255), 18, Color.argb(150, 255, 255, 255), 1));
+        label.setElevation(dp(1));
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(dp(56), dp(64));
         labelParams.setMargins(0, dp(3), dp(3), dp(3));
         row.addView(label, labelParams);
@@ -169,7 +194,7 @@ public final class MainActivity extends Activity {
             cell.setGravity(Gravity.CENTER);
             cell.setMaxLines(2);
             cell.setBackground(cellBackground(day, periodIndex));
-            cell.setElevation(day == selectedDay ? dp(2) : 0);
+            cell.setElevation(day == selectedDay ? dp(5) : dp(2));
             final Period target = period;
             cell.setOnClickListener(v -> {
                 selectedDay = target.day;
@@ -186,12 +211,12 @@ public final class MainActivity extends Activity {
         Period next = store.findCurrentOrNext(Calendar.getInstance());
         boolean isNext = next != null && next.day == day && next.index == periodIndex;
         if (isNext) {
-            return round(ORANGE_SOFT, 16, ORANGE, 2);
+            return round(Color.rgb(255, 229, 204), 20, ORANGE, 2);
         }
         if (day == selectedDay) {
-            return round(Color.rgb(255, 244, 235), 16, Color.rgb(255, 190, 135), 1);
+            return round(Color.argb(208, 255, 245, 235), 20, Color.rgb(255, 190, 135), 1);
         }
-        return round(SURFACE, 16, LINE, 1);
+        return round(Color.argb(188, 255, 255, 255), 20, Color.argb(150, 255, 255, 255), 1);
     }
 
     private void showEditor(Period period) {
@@ -202,6 +227,7 @@ public final class MainActivity extends Activity {
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setPadding(dp(22), dp(14), dp(22), dp(22));
         sheet.setBackground(bottomSheetBackground());
+        sheet.setElevation(dp(16));
 
         TextView handle = new TextView(this);
         handle.setBackground(round(Color.rgb(218, 222, 228), 6));
@@ -232,7 +258,7 @@ public final class MainActivity extends Activity {
         endParams.leftMargin = dp(12);
         times.addView(end, endParams);
 
-        Button save = pillButton("저장하기", ORANGE, Color.WHITE);
+        Button save = liquidButton("저장하기", ORANGE, Color.WHITE);
         save.setOnClickListener(v -> {
             int startMinutes = Period.parseMinutes(start.getText().toString(), period.startMinutes);
             int endMinutes = Period.parseMinutes(end.getText().toString(), period.endMinutes);
@@ -254,7 +280,7 @@ public final class MainActivity extends Activity {
         });
         sheet.addView(save, matchWrapWithMargins(0, 0, 0, dp(10)));
 
-        Button cancel = pillButton("취소", SOFT_GRAY, MUTED);
+        Button cancel = liquidButton("취소", Color.argb(190, 241, 243, 245), MUTED);
         cancel.setOnClickListener(v -> dialog.dismiss());
         sheet.addView(cancel, matchWrap());
 
@@ -315,6 +341,23 @@ public final class MainActivity extends Activity {
         return row;
     }
 
+    private LinearLayout bottomDock(Button reset, Button refresh) {
+        LinearLayout dock = new LinearLayout(this);
+        dock.setOrientation(LinearLayout.HORIZONTAL);
+        dock.setGravity(Gravity.CENTER_VERTICAL);
+        dock.setPadding(dp(10), dp(10), dp(10), dp(10));
+        dock.setBackground(round(Color.argb(138, 255, 255, 255), 34, Color.argb(180, 255, 255, 255), 1));
+        dock.setElevation(dp(18));
+
+        LinearLayout.LayoutParams resetParams = new LinearLayout.LayoutParams(0, dp(58), 0.86f);
+        resetParams.rightMargin = dp(10);
+        dock.addView(reset, resetParams);
+
+        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(0, dp(58), 1.14f);
+        dock.addView(refresh, refreshParams);
+        return dock;
+    }
+
     private LinearLayout card(int color, int radius, int strokeWidth) {
         LinearLayout layout = new LinearLayout(this);
         layout.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -335,8 +378,8 @@ public final class MainActivity extends Activity {
     private TextView icon(String value, int sp) {
         TextView view = text(value, sp, INK, Typeface.BOLD);
         view.setGravity(Gravity.CENTER);
-        view.setBackground(round(SURFACE, 18));
-        view.setElevation(dp(2));
+        view.setBackground(round(Color.argb(156, 255, 255, 255), 18, Color.argb(190, 255, 255, 255), 1));
+        view.setElevation(dp(6));
         return view;
     }
 
@@ -350,21 +393,34 @@ public final class MainActivity extends Activity {
         editText.setHintTextColor(MUTED);
         editText.setPadding(dp(16), 0, dp(16), 0);
         editText.setInputType(InputType.TYPE_CLASS_TEXT);
-        editText.setBackground(round(Color.rgb(250, 251, 253), 14, Color.rgb(204, 210, 218), 1));
+        editText.setBackground(round(Color.argb(184, 250, 251, 253), 16, Color.argb(180, 204, 210, 218), 1));
         return editText;
     }
 
-    private Button pillButton(String label, int background, int textColor) {
+    private Button liquidButton(String label, int background, int textColor) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
         button.setTextSize(16);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setTextColor(textColor);
-        button.setBackground(round(background, 24));
+        int stroke = background == ORANGE ? Color.argb(170, 255, 205, 150) : Color.argb(190, 255, 255, 255);
+        button.setBackground(round(background, 26, stroke, 1));
         button.setMinHeight(dp(54));
-        button.setElevation(background == ORANGE ? dp(3) : 0);
+        button.setElevation(background == ORANGE ? dp(10) : dp(4));
         return button;
+    }
+
+    private GradientDrawable backgroundGradient() {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{
+                        Color.rgb(255, 252, 244),
+                        OFF_WHITE,
+                        Color.rgb(238, 247, 255)
+                }
+        );
+        return drawable;
     }
 
     private GradientDrawable round(int color, int radius) {
