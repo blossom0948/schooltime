@@ -9,13 +9,14 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 
 import java.util.Calendar;
 
 final class ScheduleNotifier {
     private static final String CHANNEL_ID = "school_time_next_period";
-    private static final int NOTIFICATION_ID = 240624;
+    static final int NOTIFICATION_ID = 240624;
 
     private ScheduleNotifier() {
     }
@@ -47,24 +48,11 @@ final class ScheduleNotifier {
         }
     }
 
-    private static Notification buildNotification(Context context) {
+    static Notification buildNotification(Context context) {
         ScheduleStore store = new ScheduleStore(context);
         Calendar now = Calendar.getInstance();
-        Period next = store.findCurrentOrNext(now);
+        ScheduleSnapshot snapshot = ScheduleSnapshot.from(store, now);
         int today = store.getTodaySchoolDay(now);
-        String title;
-        String text;
-        if (next == null) {
-            title = "등록된 시간표가 없습니다";
-            text = "앱에서 시간표를 입력해 주세요";
-        } else {
-            String dayName = ScheduleStore.DAY_NAMES[next.day];
-            title = "다음 교시: " + next.subject;
-            text = dayName + " " + (next.index + 1) + "교시 · " + next.timeText();
-            if (!next.room.trim().isEmpty()) {
-                text += " · " + next.room;
-            }
-        }
 
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -75,18 +63,31 @@ final class ScheduleNotifier {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        return new Notification.Builder(context, CHANNEL_ID)
+        Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_schedule)
-                .setContentTitle(title)
-                .setContentText(text)
+                .setContentTitle(snapshot.title)
+                .setContentText(snapshot.current == null ? snapshot.subtitle : snapshot.compact)
                 .setStyle(new Notification.BigTextStyle().bigText(store.formatDayLine(today)))
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setCategory(Notification.CATEGORY_STATUS)
-                .build();
+                .setColor(Color.rgb(255, 122, 0))
+                .setCategory(Notification.CATEGORY_STATUS);
+
+        if (snapshot.current != null) {
+            builder.setUsesChronometer(true)
+                    .setChronometerCountDown(true)
+                    .setWhen(System.currentTimeMillis() + snapshot.remainingMinutes * 60_000L);
+            if (Build.VERSION.SDK_INT >= 36) {
+                builder.setStyle(new Notification.ProgressStyle()
+                        .setProgress(snapshot.progressPercent)
+                        .setProgressTrackerIcon(android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_stat_schedule))
+                        .setStyledByProgress(false));
+            }
+        }
+        return builder.build();
     }
 
     private static PendingIntent alarmIntent(Context context) {

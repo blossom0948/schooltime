@@ -10,12 +10,17 @@ SchoolTime is an Android timetable app designed for Galaxy lock screens.
 - Expand the notification to see the full timetable for today.
 - Tap a class card to edit it from a rounded bottom sheet.
 - Use the orange weekly grid to scan the full school week at once.
+- Run a foreground real-time updater for current class and remaining time.
+- Add Android widgets for compact current class and today's schedule.
+- Keep iOS ActivityKit and WidgetKit reference code in `ios-reference/`.
 
 ## About Galaxy Now Bar
 
 Samsung's Now Bar is shown at the bottom of the Galaxy lock screen for supported live activities. As of this app's first version, ordinary third-party apps cannot reliably place a fully custom card there on every Galaxy device. This app uses the closest currently usable Android path: a public, ongoing lock-screen notification.
 
 If Samsung/Android exposes general Live Updates or Now Bar integration for this device, the existing notification and schedule calculation layer can be adapted to that API.
+
+This project now uses Android ongoing notifications and Android 16 `Notification.ProgressStyle` when available. On Samsung phones, Now Bar exposure still depends on One UI support and Samsung's system policy. Standard Android home widgets are included; lock-screen/AOD placement depends on the launcher or OEM lock-screen widget support.
 
 ## Better feature ideas
 

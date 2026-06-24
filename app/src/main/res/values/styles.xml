@@ -4,4 +4,32 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:colorAccent">#2D6CDF</item>
     </style>
+
+    <style name="WidgetPeriodRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">26dp</item>
+        <item name="android:layout_marginTop">3dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+
+    <style name="WidgetPeriodSubject">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#FF191919</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="WidgetPeriodTime">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FF695E54</item>
+        <item name="android:textSize">10sp</item>
+    </style>
 </resources>

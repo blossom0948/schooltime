@@ -69,7 +69,10 @@ public final class MainActivity extends Activity {
         setContentView(buildScreen());
         requestNotificationPermission();
         render();
-        ScheduleNotifier.update(this);
+        if (canPostNotifications()) {
+            SystemUiBridge.start(this);
+        }
+        TimetableWidgetProvider.updateAll(this);
     }
 
     private View buildScreen() {
@@ -303,6 +306,7 @@ public final class MainActivity extends Activity {
         Button refresh = actionButton("잠금화면 알림 갱신", gray, ink);
         refresh.setOnClickListener(v -> {
             ScheduleNotifier.update(this);
+            TimetableWidgetProvider.updateAll(this);
             Toast.makeText(this, "알림을 갱신했습니다.", Toast.LENGTH_SHORT).show();
         });
         card.addView(refresh, matchWrap());
@@ -314,7 +318,7 @@ public final class MainActivity extends Activity {
         content.addView(accountCard(), matchWrapWithMargins(0, 0, 0, dp(12)));
         content.addView(settingActionCard("다크 모드", darkMode ? "켜짐" : "꺼짐", darkMode ? "라이트 모드로 변경" : "다크 모드로 변경", this::toggleDarkMode), matchWrapWithMargins(0, 0, 0, dp(10)));
         content.addView(settingActionCard("시간표 초기화", "기본 과목과 시간으로 되돌립니다.", "초기화", this::resetSchedule), matchWrapWithMargins(0, 0, 0, dp(10)));
-        content.addView(infoCard("앱 버전", "SchoolTime 1.5"), matchWrapWithMargins(0, 0, 0, dp(10)));
+        content.addView(infoCard("앱 버전", "SchoolTime 1.6"), matchWrapWithMargins(0, 0, 0, dp(10)));
         content.addView(infoCard("데이터", "계정과 시간표는 현재 이 기기 안에 저장됩니다."), matchWrap());
     }
 
@@ -437,6 +441,7 @@ public final class MainActivity extends Activity {
             activeTab = TAB_TIMETABLE;
             render();
             ScheduleNotifier.update(this);
+            TimetableWidgetProvider.updateAll(this);
             Toast.makeText(this, "저장했습니다.", Toast.LENGTH_SHORT).show();
         });
         sheet.addView(save, matchHeightWithMargins(dp(58), 0, 0, 0, dp(10)));
@@ -557,6 +562,7 @@ public final class MainActivity extends Activity {
         activeTab = TAB_TIMETABLE;
         render();
         ScheduleNotifier.update(this);
+        TimetableWidgetProvider.updateAll(this);
         Toast.makeText(this, "기본 시간표로 초기화했습니다.", Toast.LENGTH_SHORT).show();
     }
 
@@ -678,8 +684,14 @@ public final class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 10 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            ScheduleNotifier.update(this);
+            SystemUiBridge.start(this);
+            TimetableWidgetProvider.updateAll(this);
         }
+    }
+
+    private boolean canPostNotifications() {
+        return Build.VERSION.SDK_INT < 33
+                || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
 
     private LinearLayout gridRow() {

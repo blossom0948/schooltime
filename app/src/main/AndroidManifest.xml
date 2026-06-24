@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:allowBackup="true"
@@ -27,6 +29,33 @@
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".TimetableWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today_schedule_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CompactClassWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_compact_class_info" />
+        </receiver>
+
+        <service
+            android:name=".RealtimeUpdateService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <receiver
             android:name=".BootReceiver"
