@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.blossom.schooltime.WidgetConfigActivity"
     android:description="@string/widget_compact_description"
     android:initialLayout="@layout/widget_compact_class"
+    android:minResizeHeight="56dp"
+    android:minResizeWidth="90dp"
     android:minWidth="110dp"
     android:minHeight="70dp"
     android:previewLayout="@layout/widget_compact_class"

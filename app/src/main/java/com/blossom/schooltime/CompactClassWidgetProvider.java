@@ -8,7 +8,7 @@ public final class CompactClassWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
         for (int id : appWidgetIds) {
-            manager.updateAppWidget(id, TimetableWidgetProvider.buildCompactWidget(context));
+            manager.updateAppWidget(id, TimetableWidgetProvider.buildCompactWidget(context, id));
         }
         ScheduleNotifier.scheduleNext(context);
     }

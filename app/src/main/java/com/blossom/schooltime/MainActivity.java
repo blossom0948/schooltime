@@ -12,6 +12,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -316,9 +317,11 @@ public final class MainActivity extends Activity {
     private void renderSettings() {
         content.addView(sectionHeader("SETTINGS", "설정", "앱 정보"), matchWrapWithMargins(0, 0, 0, dp(12)));
         content.addView(accountCard(), matchWrapWithMargins(0, 0, 0, dp(12)));
+        content.addView(realtimeCard(), matchWrapWithMargins(0, 0, 0, dp(10)));
+        content.addView(infoCard("위젯 설정", "홈 화면에서 위젯을 추가하면 표시 방식 설정 화면이 열립니다. 추가 후 위젯을 길게 눌러 크기 조절과 편집도 할 수 있습니다."), matchWrapWithMargins(0, 0, 0, dp(10)));
         content.addView(settingActionCard("다크 모드", darkMode ? "켜짐" : "꺼짐", darkMode ? "라이트 모드로 변경" : "다크 모드로 변경", this::toggleDarkMode), matchWrapWithMargins(0, 0, 0, dp(10)));
         content.addView(settingActionCard("시간표 초기화", "기본 과목과 시간으로 되돌립니다.", "초기화", this::resetSchedule), matchWrapWithMargins(0, 0, 0, dp(10)));
-        content.addView(infoCard("앱 버전", "SchoolTime 1.6"), matchWrapWithMargins(0, 0, 0, dp(10)));
+        content.addView(infoCard("앱 버전", "SchoolTime 1.7"), matchWrapWithMargins(0, 0, 0, dp(10)));
         content.addView(infoCard("데이터", "계정과 시간표는 현재 이 기기 안에 저장됩니다."), matchWrap());
     }
 
@@ -351,6 +354,37 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams signupParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
         signupParams.leftMargin = dp(8);
         buttons.addView(signup, signupParams);
+        return card;
+    }
+
+    private LinearLayout realtimeCard() {
+        LinearLayout card = baseCard();
+        card.addView(text("나우바 / 실시간 알림", 17, ink, Typeface.BOLD), matchWrap());
+        TextView body = text("수업 중에는 상시 알림과 Live Updates 형식으로 현재 교시와 남은 시간을 갱신합니다. 삼성 나우바 노출은 One UI 지원 앱/잠금화면 알림 허용 여부에 따라 달라집니다.", 13, grayDark, Typeface.NORMAL);
+        body.setLineSpacing(dp(2), 1f);
+        card.addView(body, matchWrapWithMargins(0, dp(5), 0, dp(12)));
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        card.addView(buttons, matchWrap());
+
+        Button start = actionButton("실시간 켜기", ORANGE, Color.WHITE);
+        start.setOnClickListener(v -> {
+            if (canPostNotifications()) {
+                SystemUiBridge.start(this);
+                TimetableWidgetProvider.updateAll(this);
+                Toast.makeText(this, "실시간 알림을 켰습니다.", Toast.LENGTH_SHORT).show();
+            } else {
+                requestNotificationPermission();
+            }
+        });
+        buttons.addView(start, new LinearLayout.LayoutParams(0, dp(50), 1f));
+
+        Button settingsButton = actionButton("알림 설정", gray, ink);
+        settingsButton.setOnClickListener(v -> openNotificationSettings());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        params.leftMargin = dp(8);
+        buttons.addView(settingsButton, params);
         return card;
     }
 
@@ -642,6 +676,12 @@ public final class MainActivity extends Activity {
         sheet.addView(cancel, matchHeightWithMargins(dp(56), 0, 0, 0, 0));
 
         showBottomDialog(dialog, sheet);
+    }
+
+    private void openNotificationSettings() {
+        Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        startActivity(intent);
     }
 
     private LinearLayout editorSheet() {

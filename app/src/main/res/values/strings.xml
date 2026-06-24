@@ -2,4 +2,5 @@
     <string name="app_name">SchoolTime</string>
     <string name="widget_today_description">오늘 시간표와 현재 수업을 보여줍니다.</string>
     <string name="widget_compact_description">현재 교시와 남은 시간을 보여줍니다.</string>
+    <string name="widget_weekly_description">앱과 같은 주간 시간표 그리드를 보여줍니다.</string>
 </resources>
